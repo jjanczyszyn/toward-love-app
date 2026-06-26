@@ -1,5 +1,5 @@
 import { mutation } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { requireUser } from "./authHelpers";
 
 const MAX_PHOTOS = 6;
@@ -20,7 +20,7 @@ export const addPhoto = mutation({
     const user = await requireUser(ctx, token);
     if (user.photos.length >= MAX_PHOTOS) {
       await ctx.storage.delete(storageId);
-      throw new Error(`You can have at most ${MAX_PHOTOS} photos.`);
+      throw new ConvexError(`You can have at most ${MAX_PHOTOS} photos.`);
     }
     await ctx.db.patch(user._id, { photos: [...user.photos, storageId] });
     return { ok: true };

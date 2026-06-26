@@ -31,7 +31,7 @@ async function toPublic(ctx: QueryCtx, u: Doc<"users">) {
     wantKids: u.wantKids ?? null,
     location: u.location ?? null,
     bio: u.bio ?? null,
-    photoUrls: await photoUrls(ctx, u),
+    photoUrls: [...(await photoUrls(ctx, u)), ...(u.externalPhotos ?? [])],
   };
 }
 

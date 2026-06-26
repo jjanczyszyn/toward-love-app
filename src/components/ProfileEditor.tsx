@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useSession } from "../session";
 import { ChipSelect, ChipMulti } from "./Chips";
+import { getErr } from "../err";
 import {
   GENDERS,
   ORIENTATIONS,
@@ -99,7 +100,7 @@ export function ProfileEditor({
         await addPhoto({ token, storageId: json.storageId });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed.");
+      setError(getErr(err, "Upload failed."));
     } finally {
       setUploading(false);
     }
@@ -140,7 +141,7 @@ export function ProfileEditor({
       setSaved(true);
       onDone?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save.");
+      setError(getErr(err, "Could not save."));
     } finally {
       setBusy(false);
     }

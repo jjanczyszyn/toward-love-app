@@ -1,6 +1,6 @@
 import { action, mutation, query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import {
   sha256,
   randomToken,
@@ -63,7 +63,7 @@ export const prepareCode = internalMutation({
       .unique();
     const now = Date.now();
     if (existing && now - existing.createdAt < RESEND_COOLDOWN_MS) {
-      throw new Error("Please wait a moment before requesting another code.");
+      throw new ConvexError("Please wait a moment before requesting another code.");
     }
 
     const code = generateCode();
@@ -92,19 +92,19 @@ export const verifyCode = mutation({
       .query("loginCodes")
       .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
-    if (!record) throw new Error("No code found. Request a new one.");
+    if (!record) throw new ConvexError("No code found. Request a new one.");
     if (record.expiresAt < Date.now()) {
       await ctx.db.delete(record._id);
-      throw new Error("That code expired. Request a new one.");
+      throw new ConvexError("That code expired. Request a new one.");
     }
     if (record.attempts >= MAX_ATTEMPTS) {
       await ctx.db.delete(record._id);
-      throw new Error("Too many attempts. Request a new code.");
+      throw new ConvexError("Too many attempts. Request a new code.");
     }
     const codeHash = await sha256(args.code.trim());
     if (codeHash !== record.codeHash) {
       await ctx.db.patch(record._id, { attempts: record.attempts + 1 });
-      throw new Error("Incorrect code.");
+      throw new ConvexError("Incorrect code.");
     }
     await ctx.db.delete(record._id);
 
@@ -118,7 +118,7 @@ export const verifyCode = mutation({
         .query("allowlist")
         .withIndex("by_email", (q) => q.eq("email", email))
         .unique();
-      if (!approved) throw new Error("This email is not approved.");
+      if (!approved) throw new ConvexError("This email is not approved.");
       const id = await ctx.db.insert("users", {
         email,
         name: approved.name ?? "",

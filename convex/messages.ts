@@ -1,5 +1,5 @@
 import { mutation, query, QueryCtx } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
 import { mutuallyCompatible, ageOf } from "./matching";
@@ -48,22 +48,22 @@ export const send = mutation({
   handler: async (ctx, { token, toUserId, body }) => {
     const me = await requireUser(ctx, token);
     const text = body.trim();
-    if (!text) throw new Error("Message is empty.");
-    if (text.length > MAX_BODY) throw new Error("Message is too long.");
-    if (toUserId === me._id) throw new Error("You can't message yourself.");
+    if (!text) throw new ConvexError("Message is empty.");
+    if (text.length > MAX_BODY) throw new ConvexError("Message is too long.");
+    if (toUserId === me._id) throw new ConvexError("You can't message yourself.");
 
     const recipient = await ctx.db.get(toUserId);
-    if (!recipient) throw new Error("That person is no longer here.");
+    if (!recipient) throw new ConvexError("That person is no longer here.");
 
     if (await isBlockedEitherWay(ctx, me._id, toUserId)) {
-      throw new Error("You can't message this person.");
+      throw new ConvexError("You can't message this person.");
     }
     // Must satisfy each other's deal-breakers, unless a thread already exists.
     const allowed =
       mutuallyCompatible(me, recipient) ||
       (await threadHasMessages(ctx, me._id, toUserId));
     if (!allowed) {
-      throw new Error(
+      throw new ConvexError(
         "You don't meet each other's deal-breakers, so messaging is closed.",
       );
     }
@@ -97,7 +97,7 @@ export const thread = query({
     const blocked = await isBlockedEitherWay(ctx, me._id, otherUserId);
     const photo = other.photos[0]
       ? await ctx.storage.getUrl(other.photos[0])
-      : null;
+      : (other.externalPhotos?.[0] ?? null);
     return {
       other: { id: other._id, name: other.name, age: ageOf(other), photoUrl: photo },
       canMessage: !blocked && mutuallyCompatible(me, other),
@@ -168,7 +168,7 @@ export const listConversations = query({
       if (!other) continue;
       const photo = other.photos[0]
         ? await ctx.storage.getUrl(other.photos[0])
-        : null;
+        : (other.externalPhotos?.[0] ?? null);
       convos.push({
         otherId: acc.otherId,
         name: other.name,

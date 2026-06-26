@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAction, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useSession } from "../session";
+import { getErr } from "../err";
 
 export function Login() {
   const requestCode = useAction(api.auth.requestCode);
@@ -27,7 +28,7 @@ export function Login() {
         "If your email is approved, a 6-digit code is on its way. Check your inbox (and spam).",
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(getErr(err));
     } finally {
       setBusy(false);
     }
@@ -41,7 +42,7 @@ export function Login() {
       const { token } = await verifyCode({ email: email.trim(), code });
       signIn(token);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid code.");
+      setError(getErr(err, "Invalid code."));
     } finally {
       setBusy(false);
     }

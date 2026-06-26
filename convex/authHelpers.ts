@@ -1,5 +1,6 @@
 import { QueryCtx, MutationCtx } from "./_generated/server";
 import { Doc } from "./_generated/dataModel";
+import { ConvexError } from "convex/values";
 
 export async function sha256(text: string): Promise<string> {
   const buf = await crypto.subtle.digest(
@@ -55,7 +56,7 @@ export async function requireUser(
   token: string | undefined,
 ): Promise<Doc<"users">> {
   const user = await userFromToken(ctx, token);
-  if (!user) throw new Error("Not authenticated. Please sign in again.");
+  if (!user) throw new ConvexError("Not authenticated. Please sign in again.");
   return user;
 }
 
@@ -65,7 +66,7 @@ export async function requireAdmin(
 ): Promise<Doc<"users">> {
   const user = await requireUser(ctx, token);
   if (!adminEmails().includes(user.email)) {
-    throw new Error("Admins only.");
+    throw new ConvexError("Admins only.");
   }
   return user;
 }

@@ -37,6 +37,10 @@ export default defineSchema({
     location: v.optional(v.string()),
     bio: v.optional(v.string()),
     photos: v.array(v.id("_storage")),
+    // Demo/seed profiles use external placeholder image URLs (real members
+    // upload to storage). Lets us seed faces without uploads.
+    externalPhotos: v.optional(v.array(v.string())),
+    isSeed: v.optional(v.boolean()),
 
     // Match preferences + which are deal-breakers
     prefs: prefsV,

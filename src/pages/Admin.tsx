@@ -26,9 +26,13 @@ export function Admin() {
   const add = useMutation(api.allowlist.add);
   const remove = useMutation(api.allowlist.remove);
 
+  const seedProfiles = useMutation(api.seed.seedFakeProfiles);
+  const deleteSeed = useMutation(api.seed.deleteSeedProfiles);
+
   const [text, setText] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [demoMsg, setDemoMsg] = useState("");
 
   const submit = async () => {
     const entries = parseEntries(text);
@@ -68,6 +72,37 @@ export function Admin() {
         <button className="btn btn--primary" style={{ marginTop: 12 }} onClick={submit} disabled={busy}>
           {busy ? "Adding…" : "Add to allowlist"}
         </button>
+      </div>
+
+      <div className="card" style={{ marginTop: 18 }}>
+        <h3 style={{ marginTop: 0 }}>Demo data</h3>
+        <p className="hint" style={{ marginTop: 0 }}>
+          Add sample profiles to try out browsing, filtering, and messaging.
+          Delete them all in one tap before launch.
+        </p>
+        {demoMsg && <p className="ok" style={{ marginTop: 10 }}>{demoMsg}</p>}
+        <div className="row" style={{ gap: 10, marginTop: 12 }}>
+          <button
+            className="btn btn--primary btn--sm"
+            onClick={async () => {
+              setDemoMsg("");
+              const r = await seedProfiles({ token });
+              setDemoMsg(`Added ${r.created} sample profiles.`);
+            }}
+          >
+            Add sample profiles
+          </button>
+          <button
+            className="btn btn--danger btn--sm"
+            onClick={async () => {
+              setDemoMsg("");
+              const r = await deleteSeed({ token });
+              setDemoMsg(`Deleted ${r.deleted} sample profiles.`);
+            }}
+          >
+            Delete sample profiles
+          </button>
+        </div>
       </div>
 
       <div className="card" style={{ marginTop: 18 }}>

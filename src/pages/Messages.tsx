@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useSession } from "../session";
 import { Avatar } from "../components/Chips";
+import { getErr } from "../err";
 import { Id } from "../../convex/_generated/dataModel";
 
 export function Messages({
@@ -97,7 +98,7 @@ function Thread({
       await send({ token, toUserId: otherUserId, body: text });
     } catch (err) {
       setBody(text);
-      setError(err instanceof Error ? err.message : "Could not send.");
+      setError(getErr(err, "Could not send."));
     }
   };
 
