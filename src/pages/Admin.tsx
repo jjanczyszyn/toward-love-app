@@ -28,6 +28,7 @@ export function Admin() {
 
   const seedProfiles = useMutation(api.seed.seedFakeProfiles);
   const deleteSeed = useMutation(api.seed.deleteSeedProfiles);
+  const feedback = useQuery(api.feedback.list, { token }) ?? [];
 
   const [text, setText] = useState("");
   const [msg, setMsg] = useState("");
@@ -72,6 +73,29 @@ export function Admin() {
         <button className="btn btn--primary" style={{ marginTop: 12 }} onClick={submit} disabled={busy}>
           {busy ? "Adding…" : "Add to allowlist"}
         </button>
+      </div>
+
+      <div className="card" style={{ marginTop: 18 }}>
+        <h3 style={{ marginTop: 0 }}>Feedback &amp; bug reports {feedback.length ? `(${feedback.length})` : ""}</h3>
+        {feedback.length === 0 ? (
+          <p className="muted">No feedback yet.</p>
+        ) : (
+          feedback.map((f) => (
+            <div key={f.id} style={{ padding: "10px 0", borderTop: "1px solid var(--card-border)" }}>
+              <div className="row" style={{ gap: 8 }}>
+                <b>{f.from}</b>
+                <span className="small muted">{new Date(f.createdAt).toLocaleString()}</span>
+              </div>
+              {f.message && <p style={{ margin: "6px 0", whiteSpace: "pre-wrap" }}>{f.message}</p>}
+              {f.context && <div className="small muted" style={{ wordBreak: "break-all" }}>{f.context}</div>}
+              {f.screenshotUrl && (
+                <a href={f.screenshotUrl} target="_blank" rel="noreferrer">
+                  <img src={f.screenshotUrl} alt="screenshot" style={{ maxWidth: "100%", borderRadius: 10, marginTop: 8 }} />
+                </a>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
       <div className="card" style={{ marginTop: 18 }}>

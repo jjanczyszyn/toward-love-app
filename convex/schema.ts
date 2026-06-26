@@ -106,6 +106,17 @@ export default defineSchema({
     .index("by_blocked", ["blockedId"])
     .index("by_pair", ["blockerId", "blockedId"]),
 
+  // Bug reports / feedback from members.
+  feedback: defineTable({
+    userId: v.id("users"),
+    email: v.string(),
+    message: v.string(),
+    screenshotId: v.optional(v.id("_storage")),
+    context: v.optional(v.string()), // current view/URL
+    userAgent: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_createdAt", ["createdAt"]),
+
   // Hides (one-way: hidden person is removed from the hider's matches; whether
   // they can still message the hider depends on the hider's hiddenCanMessage).
   hides: defineTable({

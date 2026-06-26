@@ -12,6 +12,7 @@ import type * as allowlist from "../allowlist.js";
 import type * as auth from "../auth.js";
 import type * as authHelpers from "../authHelpers.js";
 import type * as blocks from "../blocks.js";
+import type * as feedback from "../feedback.js";
 import type * as files from "../files.js";
 import type * as hides from "../hides.js";
 import type * as matching from "../matching.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   authHelpers: typeof authHelpers;
   blocks: typeof blocks;
+  feedback: typeof feedback;
   files: typeof files;
   hides: typeof hides;
   matching: typeof matching;

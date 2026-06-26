@@ -9,6 +9,7 @@ import { PublicProfile } from "./pages/PublicProfile";
 import { Messages } from "./pages/Messages";
 import { EditProfile } from "./pages/EditProfile";
 import { Admin } from "./pages/Admin";
+import { FeedbackWidget } from "./components/FeedbackWidget";
 import { Id } from "../convex/_generated/dataModel";
 
 type Tab = "browse" | "messages" | "profile" | "admin";
@@ -125,6 +126,8 @@ function Shell({
       ) : (
         <Admin />
       )}
+
+      <FeedbackWidget />
     </div>
   );
 }
