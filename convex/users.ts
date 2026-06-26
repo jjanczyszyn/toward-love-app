@@ -30,6 +30,7 @@ async function toPublic(ctx: QueryCtx, u: Doc<"users">) {
     haveKids: u.haveKids ?? null,
     wantKids: u.wantKids ?? null,
     location: u.location ?? null,
+    locations: u.locations ?? (u.location ? [u.location] : []),
     bio: u.bio ?? null,
     photoUrls: [...(await photoUrls(ctx, u)), ...(u.externalPhotos ?? [])],
   };
@@ -51,6 +52,15 @@ async function blockSets(ctx: QueryCtx, meId: Id<"users">) {
   return set;
 }
 
+// Users I've hidden from my matches (one-way).
+async function hiddenByMe(ctx: QueryCtx, meId: Id<"users">) {
+  const rows = await ctx.db
+    .query("hides")
+    .withIndex("by_hider", (q) => q.eq("hiderId", meId))
+    .collect();
+  return new Set<string>(rows.map((r) => r.hiddenId));
+}
+
 export const updateProfile = mutation({
   args: {
     token: v.optional(v.string()),
@@ -62,9 +72,11 @@ export const updateProfile = mutation({
     haveKids: v.optional(haveKidsV),
     wantKids: v.optional(wantKidsV),
     location: v.optional(v.string()),
+    locations: v.optional(v.array(v.string())),
     bio: v.optional(v.string()),
     prefs: v.optional(prefsV),
     dealBreakers: v.optional(dealBreakersV),
+    hiddenCanMessage: v.optional(v.boolean()),
     markOnboarded: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -78,9 +90,13 @@ export const updateProfile = mutation({
     if (args.haveKids !== undefined) patch.haveKids = args.haveKids;
     if (args.wantKids !== undefined) patch.wantKids = args.wantKids;
     if (args.location !== undefined) patch.location = args.location.trim();
+    if (args.locations !== undefined)
+      patch.locations = args.locations.map((l) => l.trim()).filter(Boolean);
     if (args.bio !== undefined) patch.bio = args.bio.trim();
     if (args.prefs !== undefined) patch.prefs = args.prefs;
     if (args.dealBreakers !== undefined) patch.dealBreakers = args.dealBreakers;
+    if (args.hiddenCanMessage !== undefined)
+      patch.hiddenCanMessage = args.hiddenCanMessage;
     if (args.markOnboarded) patch.onboarded = true;
     await ctx.db.patch(user._id, patch);
     return { ok: true };
@@ -116,6 +132,7 @@ export const browse = query({
   handler: async (ctx, { token, filters }) => {
     const me = await requireUser(ctx, token);
     const blocked = await blockSets(ctx, me._id);
+    const hidden = await hiddenByMe(ctx, me._id);
     const f = filters ?? {};
 
     const all = await ctx.db.query("users").collect();
@@ -124,6 +141,7 @@ export const browse = query({
       if (u._id === me._id) continue;
       if (!u.onboarded) continue;
       if (blocked.has(u._id)) continue;
+      if (hidden.has(u._id)) continue;
 
       const age = ageOf(u);
       if (f.genders?.length && (!u.gender || !f.genders.includes(u.gender)))
@@ -141,7 +159,8 @@ export const browse = query({
       if (f.hasPhoto && u.photos.length === 0) continue;
       if (f.search) {
         const q = f.search.toLowerCase();
-        const hay = `${u.name} ${u.bio ?? ""} ${u.location ?? ""}`.toLowerCase();
+        const locs = (u.locations ?? (u.location ? [u.location] : [])).join(" ");
+        const hay = `${u.name} ${u.bio ?? ""} ${locs}`.toLowerCase();
         if (!hay.includes(q)) continue;
       }
 
@@ -179,12 +198,19 @@ export const getProfile = query({
         q.eq("blockerId", me._id).eq("blockedId", userId),
       )
       .unique();
+    const iHid = await ctx.db
+      .query("hides")
+      .withIndex("by_pair", (q) =>
+        q.eq("hiderId", me._id).eq("hiddenId", userId),
+      )
+      .unique();
     const compatible = mutuallyCompatible(me, u);
     return {
       ...(await toPublic(ctx, u)),
       compatible,
       canMessage: compatible && !blocked.has(userId),
       youBlocked: !!iBlocked,
+      youHid: !!iHid,
       // Explain which of MY deal-breakers they fail, for transparency.
       passesMine: candidatePassesViewer(me, u),
       passesTheirs: candidatePassesViewer(u, me),

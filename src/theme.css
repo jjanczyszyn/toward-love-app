@@ -149,3 +149,15 @@ textarea.input { resize: vertical; min-height: 90px; line-height: 1.5; }
 
 .notice { background: var(--card-2); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px 14px; color: var(--muted); font-size: 14px; }
 .empty { text-align: center; color: var(--muted); padding: 48px 16px; }
+
+.linklike { background: none; border: none; padding: 0; margin: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: none; }
+.linklike:hover { text-decoration: underline; }
+
+/* Modal (crop, etc.) */
+.modal { position: fixed; inset: 0; background: rgba(6,4,9,.72); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; z-index: 60; }
+.modal__panel { position: relative; background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 24px; max-width: 560px; width: 100%; }
+.modal__panel h3 { margin: 0 0 4px; }
+
+/* Cropper */
+.crop__area { position: relative; width: 100%; height: min(70vw, 340px); background: #000; border-radius: 12px; overflow: hidden; }
+.crop__zoom { width: 100%; margin-top: 14px; accent-color: var(--accent-2); }

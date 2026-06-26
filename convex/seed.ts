@@ -61,7 +61,7 @@ export const seedFakeProfiles = mutation({
         relationship: s.relationship,
         haveKids: s.haveKids,
         wantKids: s.wantKids,
-        location: s.location,
+        locations: [s.location],
         bio: s.bio,
         photos: [],
         externalPhotos: [`https://i.pravatar.cc/480?img=${s.img}`],
@@ -106,6 +106,16 @@ export const deleteSeedProfiles = mutation({
         .withIndex("by_blocked", (q) => q.eq("blockedId", u._id))
         .collect())
         await ctx.db.delete(b._id);
+      for (const h of await ctx.db
+        .query("hides")
+        .withIndex("by_hider", (q) => q.eq("hiderId", u._id))
+        .collect())
+        await ctx.db.delete(h._id);
+      for (const h of await ctx.db
+        .query("hides")
+        .withIndex("by_hidden", (q) => q.eq("hiddenId", u._id))
+        .collect())
+        await ctx.db.delete(h._id);
       for (const sn of await ctx.db
         .query("sessions")
         .withIndex("by_user", (q) => q.eq("userId", u._id))

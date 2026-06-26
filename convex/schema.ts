@@ -34,7 +34,8 @@ export default defineSchema({
     relationship: v.optional(relationshipV),
     haveKids: v.optional(haveKidsV),
     wantKids: v.optional(wantKidsV),
-    location: v.optional(v.string()),
+    location: v.optional(v.string()), // legacy single location (back-compat)
+    locations: v.optional(v.array(v.string())),
     bio: v.optional(v.string()),
     photos: v.array(v.id("_storage")),
     // Demo/seed profiles use external placeholder image URLs (real members
@@ -45,6 +46,9 @@ export default defineSchema({
     // Match preferences + which are deal-breakers
     prefs: prefsV,
     dealBreakers: dealBreakersV,
+
+    // If true, people you've hidden from matches can still message you.
+    hiddenCanMessage: v.optional(v.boolean()),
   }).index("by_email", ["email"]),
 
   // Login codes (one active per email; replaced on re-request).
@@ -82,7 +86,8 @@ export default defineSchema({
     .index("by_b", ["b"])
     .index("by_recipient_unread", ["recipientId", "readAt"]),
 
-  // Blocks (directional; messaging is disabled if either side blocks).
+  // Blocks (mutual effect; messaging disabled if either side blocks, and each
+  // disappears from the other's browse).
   blocks: defineTable({
     blockerId: v.id("users"),
     blockedId: v.id("users"),
@@ -91,4 +96,15 @@ export default defineSchema({
     .index("by_blocker", ["blockerId"])
     .index("by_blocked", ["blockedId"])
     .index("by_pair", ["blockerId", "blockedId"]),
+
+  // Hides (one-way: hidden person is removed from the hider's matches; whether
+  // they can still message the hider depends on the hider's hiddenCanMessage).
+  hides: defineTable({
+    hiderId: v.id("users"),
+    hiddenId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_hider", ["hiderId"])
+    .index("by_hidden", ["hiddenId"])
+    .index("by_pair", ["hiderId", "hiddenId"]),
 });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useSession } from "../session";
 import { ChipSelect, ChipMulti } from "../components/Chips";
@@ -38,6 +38,7 @@ export function Browse({ onOpen }: { onOpen: (id: Id<"users">) => void }) {
   };
 
   const people = useQuery(api.users.browse, { token, filters });
+  const hide = useMutation(api.hides.hide);
 
   const reset = () => {
     setGenders([]);
@@ -114,12 +115,25 @@ export function Browse({ onOpen }: { onOpen: (id: Id<"users">) => void }) {
                   {p.name}
                   {p.age ? <span className="muted">, {p.age}</span> : null}
                 </div>
-                {p.location && <div className="small muted">{p.location}</div>}
+                {p.locations && p.locations.length > 0 && (
+                  <div className="small muted">{p.locations.join(" · ")}</div>
+                )}
                 <div className="tags">
                   {p.compatible && <span className="tag tag--ok">✓ matches you</span>}
                   {p.relationship && <span className="tag">{labelFor(RELATIONSHIPS, p.relationship)}</span>}
                   {p.wantKids && <span className="tag">{labelFor(WANT_KIDS, p.wantKids)}</span>}
                 </div>
+                <button
+                  type="button"
+                  className="linklike small"
+                  style={{ marginTop: 10 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    hide({ token, userId: p.id });
+                  }}
+                >
+                  Hide from matches
+                </button>
               </div>
             </div>
           ))}

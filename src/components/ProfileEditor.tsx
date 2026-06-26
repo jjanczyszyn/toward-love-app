@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useSession } from "../session";
 import { ChipSelect, ChipMulti } from "./Chips";
+import { CropModal } from "./CropModal";
 import { getErr } from "../err";
 import {
   GENDERS,
@@ -36,8 +37,12 @@ export function ProfileEditor({
   const [relationship, setRelationship] = useState<string>("");
   const [haveKids, setHaveKids] = useState<string>("");
   const [wantKids, setWantKids] = useState<string>("");
-  const [location, setLocation] = useState("");
+  const [locations, setLocations] = useState<string[]>([]);
+  const [locationInput, setLocationInput] = useState("");
   const [bio, setBio] = useState("");
+  const [hiddenCanMessage, setHiddenCanMessage] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
 
   const [interestedInGenders, setIIG] = useState<string[]>([]);
   const [relationshipTypes, setRT] = useState<string[]>([]);
@@ -66,8 +71,9 @@ export function ProfileEditor({
       setRelationship(me.relationship ?? "");
       setHaveKids(me.haveKids ?? "");
       setWantKids(me.wantKids ?? "");
-      setLocation(me.location ?? "");
+      setLocations(me.locations ?? (me.location ? [me.location] : []));
       setBio(me.bio ?? "");
+      setHiddenCanMessage(me.hiddenCanMessage ?? false);
       setIIG(me.prefs.interestedInGenders);
       setRT(me.prefs.relationshipTypes);
       setWKP(me.prefs.wantKids);
@@ -84,26 +90,61 @@ export function ProfileEditor({
     .map((id, i) => ({ id, url: me.photoUrls[i] }))
     .filter((p) => !!p.url) as any;
 
+  const readAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+
+  // Selecting files opens the cropper for each, one at a time.
   const onFiles = async (files: FileList | null) => {
-    if (!files) return;
+    if (!files || files.length === 0) return;
     setError("");
+    const arr = Array.from(files);
+    setCropSrc(await readAsDataUrl(arr[0]));
+    setCropQueue(arr.slice(1));
+  };
+
+  const advanceQueue = async () => {
+    if (cropQueue.length > 0) {
+      const [next, ...rest] = cropQueue;
+      setCropQueue(rest);
+      setCropSrc(await readAsDataUrl(next));
+    } else {
+      setCropSrc(null);
+    }
+  };
+
+  const onCropDone = async (blob: Blob) => {
     setUploading(true);
     try {
-      for (const file of Array.from(files)) {
-        const url = await genUrl({ token });
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
-        const json = await res.json();
-        await addPhoto({ token, storageId: json.storageId });
-      }
+      const url = await genUrl({ token });
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "image/jpeg" },
+        body: blob,
+      });
+      const json = await res.json();
+      await addPhoto({ token, storageId: json.storageId });
     } catch (err) {
       setError(getErr(err, "Upload failed."));
     } finally {
       setUploading(false);
+      await advanceQueue();
     }
+  };
+
+  const onCropCancel = () => {
+    setCropSrc(null);
+    setCropQueue([]);
+  };
+
+  const addLocation = () => {
+    const v = locationInput.trim();
+    if (v && !locations.includes(v)) setLocations([...locations, v]);
+    setLocationInput("");
   };
 
   const save = async () => {
@@ -126,8 +167,9 @@ export function ProfileEditor({
         relationship: (relationship || undefined) as any,
         haveKids: (haveKids || undefined) as any,
         wantKids: (wantKids || undefined) as any,
-        location: location.trim(),
+        locations,
         bio: bio.trim(),
+        hiddenCanMessage,
         prefs: {
           interestedInGenders: interestedInGenders as any,
           relationshipTypes: relationshipTypes as any,
@@ -167,27 +209,49 @@ export function ProfileEditor({
       <label className="label label--first">Name</label>
       <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
 
-      <div className="row" style={{ gap: 16, marginTop: 4 }}>
-        <div style={{ flex: 1 }}>
-          <label className="label">Birth year</label>
-          <input
-            className="input"
-            inputMode="numeric"
-            placeholder="1990"
-            value={birthYear}
-            onChange={(e) => setBirthYear(e.target.value)}
-          />
-        </div>
-        <div style={{ flex: 1 }}>
-          <label className="label">Location</label>
-          <input
-            className="input"
-            placeholder="San Francisco"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          />
-        </div>
+      <label className="label">Birth year</label>
+      <input
+        className="input"
+        inputMode="numeric"
+        placeholder="1990"
+        value={birthYear}
+        onChange={(e) => setBirthYear(e.target.value)}
+      />
+
+      <label className="label">Locations</label>
+      <div className="chips" style={{ marginBottom: locations.length ? 10 : 0 }}>
+        {locations.map((loc) => (
+          <span className="chip chip--on" key={loc}>
+            {loc}
+            <button
+              type="button"
+              aria-label={`Remove ${loc}`}
+              onClick={() => setLocations(locations.filter((l) => l !== loc))}
+              style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", marginLeft: 6 }}
+            >
+              ×
+            </button>
+          </span>
+        ))}
       </div>
+      <div className="row" style={{ gap: 8 }}>
+        <input
+          className="input"
+          placeholder="Add a city (e.g. San Francisco)"
+          value={locationInput}
+          onChange={(e) => setLocationInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addLocation();
+            }
+          }}
+        />
+        <button type="button" className="btn btn--ghost" onClick={addLocation}>
+          Add
+        </button>
+      </div>
+      <p className="hint">Add as many as you like (where you live or spend time).</p>
 
       <label className="label">Photos</label>
       <div className="photoedit">
@@ -269,11 +333,34 @@ export function ProfileEditor({
         <input className="input" inputMode="numeric" placeholder="Max" value={ageMax} onChange={(e) => setAgeMax(e.target.value)} />
       </div>
 
+      <hr style={{ border: "none", borderTop: "1px solid var(--card-border)", margin: "26px 0" }} />
+      <h3 style={{ margin: "0 0 4px" }}>Privacy</h3>
+      <div className="row" style={{ justifyContent: "space-between", marginTop: 10 }}>
+        <span className="label" style={{ margin: 0, maxWidth: "70%" }}>
+          Let people I've hidden from matches still message me
+        </span>
+        <button
+          type="button"
+          className={"chip" + (hiddenCanMessage ? " chip--on" : "")}
+          onClick={() => setHiddenCanMessage(!hiddenCanMessage)}
+        >
+          {hiddenCanMessage ? "On" : "Off"}
+        </button>
+      </div>
+      <p className="hint" style={{ marginTop: 6 }}>
+        Hiding someone removes them from your matches. When this is off, they also
+        can't message you.
+      </p>
+
       {error && <p className="error" style={{ marginTop: 16 }}>{error}</p>}
       {saved && !onboarding && <p className="ok" style={{ marginTop: 16 }}>Saved.</p>}
       <button className="btn btn--primary btn--full" style={{ marginTop: 18 }} onClick={save} disabled={busy}>
         {busy ? "Saving…" : onboarding ? "Enter toward.love" : "Save changes"}
       </button>
+
+      {cropSrc && (
+        <CropModal src={cropSrc} onCancel={onCropCancel} onDone={onCropDone} />
+      )}
     </div>
   );
 }

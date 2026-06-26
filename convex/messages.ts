@@ -58,6 +58,18 @@ export const send = mutation({
     if (await isBlockedEitherWay(ctx, me._id, toUserId)) {
       throw new ConvexError("You can't message this person.");
     }
+    // If the recipient hid me and doesn't allow messages from hidden people.
+    const recipientHidMe = await ctx.db
+      .query("hides")
+      .withIndex("by_pair", (q) =>
+        q.eq("hiderId", toUserId).eq("hiddenId", me._id),
+      )
+      .unique();
+    if (recipientHidMe && recipient.hiddenCanMessage !== true) {
+      throw new ConvexError(
+        "This person isn't accepting messages from you right now.",
+      );
+    }
     // Must satisfy each other's deal-breakers, unless a thread already exists.
     const allowed =
       mutuallyCompatible(me, recipient) ||
@@ -95,12 +107,19 @@ export const thread = query({
       )
       .collect();
     const blocked = await isBlockedEitherWay(ctx, me._id, otherUserId);
+    const otherHidMe = await ctx.db
+      .query("hides")
+      .withIndex("by_pair", (q) =>
+        q.eq("hiderId", otherUserId).eq("hiddenId", me._id),
+      )
+      .unique();
+    const hiddenBlocksMe = !!otherHidMe && other.hiddenCanMessage !== true;
     const photo = other.photos[0]
       ? await ctx.storage.getUrl(other.photos[0])
       : (other.externalPhotos?.[0] ?? null);
     return {
       other: { id: other._id, name: other.name, age: ageOf(other), photoUrl: photo },
-      canMessage: !blocked && mutuallyCompatible(me, other),
+      canMessage: !blocked && !hiddenBlocksMe && mutuallyCompatible(me, other),
       blocked,
       messages: msgs.map((m) => ({
         id: m._id,

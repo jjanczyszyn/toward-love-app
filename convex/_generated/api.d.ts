@@ -13,6 +13,7 @@ import type * as auth from "../auth.js";
 import type * as authHelpers from "../authHelpers.js";
 import type * as blocks from "../blocks.js";
 import type * as files from "../files.js";
+import type * as hides from "../hides.js";
 import type * as matching from "../matching.js";
 import type * as messages from "../messages.js";
 import type * as seed from "../seed.js";
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   authHelpers: typeof authHelpers;
   blocks: typeof blocks;
   files: typeof files;
+  hides: typeof hides;
   matching: typeof matching;
   messages: typeof messages;
   seed: typeof seed;

@@ -24,6 +24,8 @@ export function PublicProfile({
   const p = useQuery(api.users.getProfile, { token, userId });
   const block = useMutation(api.blocks.block);
   const unblock = useMutation(api.blocks.unblock);
+  const hide = useMutation(api.hides.hide);
+  const unhide = useMutation(api.hides.unhide);
 
   if (p === undefined) return <div className="empty">Loading…</div>;
   if (p === null) return <div className="empty">This member is no longer here.</div>;
@@ -54,7 +56,9 @@ export function PublicProfile({
           {p.name}
           {p.age ? <span className="muted">, {p.age}</span> : null}
         </h2>
-        {p.location && <div className="muted">{p.location}</div>}
+        {p.locations && p.locations.length > 0 && (
+          <div className="muted">{p.locations.join(" · ")}</div>
+        )}
 
         <div className="tags" style={{ marginTop: 12 }}>
           {p.compatible && <span className="tag tag--ok">✓ matches you</span>}
@@ -80,6 +84,15 @@ export function PublicProfile({
                     ? "You don't meet one of their deal-breakers."
                     : "Messaging isn't available."}
             </span>
+          )}
+          {p.youHid ? (
+            <button className="btn btn--ghost" onClick={() => unhide({ token, userId: p.id })}>
+              Unhide
+            </button>
+          ) : (
+            <button className="btn btn--ghost" onClick={() => hide({ token, userId: p.id })}>
+              Hide from matches
+            </button>
           )}
           {p.youBlocked ? (
             <button className="btn btn--ghost" onClick={() => unblock({ token, userId: p.id })}>

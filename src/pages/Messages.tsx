@@ -75,6 +75,8 @@ function Thread({
   const data = useQuery(api.messages.thread, { token, otherUserId });
   const send = useMutation(api.messages.send);
   const markRead = useMutation(api.messages.markRead);
+  const block = useMutation(api.blocks.block);
+  const hide = useMutation(api.hides.hide);
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -109,7 +111,13 @@ function Thread({
         <b>{data.other.name}</b>
         <span className="spacer" />
         <button className="btn btn--ghost btn--sm" onClick={() => onViewProfile(otherUserId)}>
-          View profile
+          Profile
+        </button>
+        <button className="btn btn--ghost btn--sm" onClick={() => hide({ token, userId: otherUserId })}>
+          Hide
+        </button>
+        <button className="btn btn--danger btn--sm" onClick={() => block({ token, userId: otherUserId })}>
+          Block
         </button>
       </div>
       <div className="chat__body">
