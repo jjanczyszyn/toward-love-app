@@ -15,6 +15,7 @@ import type * as blocks from "../blocks.js";
 import type * as files from "../files.js";
 import type * as matching from "../matching.js";
 import type * as messages from "../messages.js";
+import type * as ses from "../ses.js";
 import type * as users from "../users.js";
 import type * as validators from "../validators.js";
 
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   matching: typeof matching;
   messages: typeof messages;
+  ses: typeof ses;
   users: typeof users;
   validators: typeof validators;
 }>;

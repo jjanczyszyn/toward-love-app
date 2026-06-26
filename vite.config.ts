@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Served from the GitHub Pages project path jjanczyszyn.github.io/toward-love-app/
+// Served at the app.toward.love custom domain (root).
 export default defineConfig({
-  base: "/toward-love-app/",
+  base: "/",
   plugins: [react()],
 });

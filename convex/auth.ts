@@ -9,6 +9,7 @@ import {
   userFromToken,
   adminEmails,
 } from "./authHelpers";
+import { sendEmailSES } from "./ses";
 
 const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const SESSION_TTL_MS = 60 * 24 * 60 * 60 * 1000; // 60 days
@@ -33,30 +34,16 @@ export const requestCode = action({
 });
 
 async function sendCodeEmail(email: string, code: string) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.LOGIN_FROM ?? "Toward Love <login@popoyo.co>";
-  if (!apiKey) throw new Error("Email is not configured (RESEND_API_KEY).");
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: email,
-      subject: `Your toward.love code: ${code}`,
-      text: `Your toward.love login code is ${code}\n\nIt expires in 10 minutes. If you didn't request this, you can ignore this email.`,
-      html: `<div style="font-family:system-ui,sans-serif;font-size:16px;color:#16131c">
+  await sendEmailSES({
+    to: email,
+    subject: `Your toward.love code: ${code}`,
+    text: `Your toward.love login code is ${code}\n\nIt expires in 10 minutes. If you didn't request this, you can ignore this email.`,
+    html: `<div style="font-family:system-ui,sans-serif;font-size:16px;color:#16131c">
         <p>Your toward.love login code is:</p>
         <p style="font-size:32px;font-weight:700;letter-spacing:4px">${code}</p>
         <p style="color:#6b6577">It expires in 10 minutes. If you didn't request this, you can ignore this email.</p>
       </div>`,
-    }),
   });
-  if (!res.ok) {
-    throw new Error(`Could not send login email (${res.status}).`);
-  }
 }
 
 // Internal: validate allowlist + rate-limit, store hashed code, return plaintext
