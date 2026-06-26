@@ -6,8 +6,9 @@ and community. Same dark aesthetic as the toward.love website.
 ## What it does
 
 - **Invite-only login.** Only preapproved emails can sign in. Login is
-  passwordless: a one-time 6-digit code is emailed (via Resend), rate-limited.
-  No marketing emails are ever sent — the only email is the login code you request.
+  passwordless: a one-time 6-digit code is emailed from `hello@toward.love`
+  (AWS SES, SigV4-signed), rate-limited. No marketing emails are ever sent. The
+  only email is the login code you request.
 - **Private by default.** Nothing personal is visible without logging in
   (`<meta robots noindex>` + all data behind auth). **Emails are never shared**
   between members; people only message each other in-app.
@@ -25,10 +26,10 @@ and community. Same dark aesthetic as the toward.love website.
 
 ## Stack
 
-- **Vite + React + TypeScript**, hosted on **GitHub Pages**.
+- **Vite + React + TypeScript**, hosted on **GitHub Pages** at `app.toward.love`.
 - **Convex** backend + file storage. Project: `toward-love-app` (separate from
   the website's `toward-love` project).
-- **Resend** for login-code emails.
+- **AWS SES** for login-code emails, sent from `hello@toward.love`.
 
 ## Run locally
 
@@ -46,11 +47,14 @@ Pushing to `main` runs `.github/workflows/deploy.yml`:
 with the prod Convex URL), then publishes `dist/` to GitHub Pages.
 
 Required Convex env vars (set on the deployment):
-- `RESEND_API_KEY` — for login emails
+- `AWS_SES_ACCESS_KEY_ID` / `AWS_SES_SECRET_ACCESS_KEY` — IAM key allowed to
+  `ses:SendEmail` from `hello@toward.love`
+- `AWS_SES_REGION` — e.g. `us-east-1`
+- `LOGIN_FROM` — sender, e.g. `Toward Love <hello@toward.love>`
 - `ADMIN_EMAILS` — comma-separated admin emails
-- `LOGIN_FROM` — sender, e.g. `Toward Love <login@popoyo.co>`
 
-Required repo secret: `CONVEX_DEPLOY_KEY`. Pages source: GitHub Actions.
+Required repo secret: `CONVEX_DEPLOY_KEY`. Pages source: GitHub Actions; custom
+domain `app.toward.love` via `public/CNAME`.
 
 ### Seed the allowlist from the website mailing list
 
