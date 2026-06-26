@@ -120,6 +120,20 @@ textarea.input { resize: vertical; min-height: 90px; line-height: 1.5; }
 .tag { font-size: 12px; color: var(--muted); background: var(--chip); border: 1px solid var(--chip-border); border-radius: 999px; padding: 3px 9px; }
 .tag--ok { color: var(--ok); border-color: #244a3a; }
 
+/* Toast */
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  background: var(--card); border: 1px solid var(--accent-2); color: var(--text);
+  padding: 12px 18px; border-radius: 999px; font-size: 14px; z-index: 80;
+  box-shadow: 0 16px 50px -16px rgba(0,0,0,.6); max-width: calc(100% - 32px);
+}
+
+/* Segmented control (Romantic / Friends) */
+.seg { display: inline-flex; background: var(--chip); border: 1px solid var(--chip-border); border-radius: 999px; padding: 4px; gap: 4px; }
+.seg__btn { background: none; border: none; color: var(--muted); font: inherit; font-weight: 600; padding: 7px 18px; border-radius: 999px; cursor: pointer; }
+.seg__btn:hover { color: var(--text); }
+.seg__btn--on { background: linear-gradient(90deg, var(--accent), var(--accent-2)); color: #fff; }
+
 /* Filters bar */
 .filters { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 16px; margin-bottom: 18px; }
 

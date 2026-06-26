@@ -11,7 +11,13 @@ import {
   prefsV,
   dealBreakersV,
 } from "./validators";
-import { ageOf, candidatePassesViewer, mutuallyCompatible } from "./matching";
+import {
+  ageOf,
+  candidatePassesViewer,
+  mutuallyCompatible,
+  openTo,
+  seekingOf,
+} from "./matching";
 
 async function photoUrls(ctx: QueryCtx, u: Doc<"users">) {
   const urls = await Promise.all(u.photos.map((id) => ctx.storage.getUrl(id)));
@@ -77,6 +83,9 @@ export const updateProfile = mutation({
     prefs: v.optional(prefsV),
     dealBreakers: v.optional(dealBreakersV),
     hiddenCanMessage: v.optional(v.boolean()),
+    seeking: v.optional(
+      v.array(v.union(v.literal("romantic"), v.literal("friend"))),
+    ),
     markOnboarded: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -97,6 +106,7 @@ export const updateProfile = mutation({
     if (args.dealBreakers !== undefined) patch.dealBreakers = args.dealBreakers;
     if (args.hiddenCanMessage !== undefined)
       patch.hiddenCanMessage = args.hiddenCanMessage;
+    if (args.seeking !== undefined) patch.seeking = args.seeking;
     if (args.markOnboarded) patch.onboarded = true;
     await ctx.db.patch(user._id, patch);
     return { ok: true };
@@ -128,9 +138,14 @@ const filtersV = v.object({
 });
 
 export const browse = query({
-  args: { token: v.optional(v.string()), filters: v.optional(filtersV) },
-  handler: async (ctx, { token, filters }) => {
+  args: {
+    token: v.optional(v.string()),
+    filters: v.optional(filtersV),
+    intent: v.optional(v.union(v.literal("romantic"), v.literal("friend"))),
+  },
+  handler: async (ctx, { token, filters, intent: intentArg }) => {
     const me = await requireUser(ctx, token);
+    const intent = intentArg ?? "romantic";
     const blocked = await blockSets(ctx, me._id);
     const hidden = await hiddenByMe(ctx, me._id);
     const f = filters ?? {};
@@ -142,6 +157,7 @@ export const browse = query({
       if (!u.onboarded) continue;
       if (blocked.has(u._id)) continue;
       if (hidden.has(u._id)) continue;
+      if (!openTo(u, intent)) continue; // only people open to this connection type
 
       const age = ageOf(u);
       if (f.genders?.length && (!u.gender || !f.genders.includes(u.gender)))
@@ -164,8 +180,10 @@ export const browse = query({
         if (!hay.includes(q)) continue;
       }
 
-      const compatible = mutuallyCompatible(me, u);
-      if (f.onlyCompatible && !compatible) continue;
+      // Deal-breakers only matter for romantic; friends ignore them.
+      const compatible =
+        intent === "friend" ? true : mutuallyCompatible(me, u);
+      if (intent === "romantic" && f.onlyCompatible && !compatible) continue;
 
       results.push({
         ...(await toPublic(ctx, u)),
@@ -205,10 +223,18 @@ export const getProfile = query({
       )
       .unique();
     const compatible = mutuallyCompatible(me, u);
+    const reachable = !blocked.has(userId);
     return {
       ...(await toPublic(ctx, u)),
       compatible,
-      canMessage: compatible && !blocked.has(userId),
+      canMessage: compatible && reachable,
+      seeking: seekingOf(u),
+      romanticOk:
+        reachable &&
+        openTo(me, "romantic") &&
+        openTo(u, "romantic") &&
+        compatible,
+      friendOk: reachable && openTo(me, "friend") && openTo(u, "friend"),
       youBlocked: !!iBlocked,
       youHid: !!iHid,
       // Explain which of MY deal-breakers they fail, for transparency.

@@ -11,6 +11,7 @@ import {
   RELATIONSHIPS,
   HAVE_KIDS,
   WANT_KIDS,
+  SEEKING,
 } from "../labels";
 import { Id } from "../../convex/_generated/dataModel";
 
@@ -40,6 +41,7 @@ export function ProfileEditor({
   const [locations, setLocations] = useState<string[]>([]);
   const [locationInput, setLocationInput] = useState("");
   const [bio, setBio] = useState("");
+  const [seeking, setSeeking] = useState<string[]>(["romantic"]);
   const [hiddenCanMessage, setHiddenCanMessage] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [cropQueue, setCropQueue] = useState<File[]>([]);
@@ -73,6 +75,7 @@ export function ProfileEditor({
       setWantKids(me.wantKids ?? "");
       setLocations(me.locations ?? (me.location ? [me.location] : []));
       setBio(me.bio ?? "");
+      setSeeking(me.seeking ?? ["romantic"]);
       setHiddenCanMessage(me.hiddenCanMessage ?? false);
       setIIG(me.prefs.interestedInGenders);
       setRT(me.prefs.relationshipTypes);
@@ -169,6 +172,7 @@ export function ProfileEditor({
         wantKids: (wantKids || undefined) as any,
         locations,
         bio: bio.trim(),
+        seeking: (seeking.length ? seeking : ["romantic"]) as any,
         hiddenCanMessage,
         prefs: {
           interestedInGenders: interestedInGenders as any,
@@ -286,6 +290,13 @@ export function ProfileEditor({
         value={bio}
         onChange={(e) => setBio(e.target.value)}
       />
+
+      <label className="label">Open to</label>
+      <ChipMulti options={SEEKING} values={seeking} onChange={setSeeking} />
+      <p className="hint">
+        Choose romantic, friendship, or both. Deal-breakers only apply to
+        romantic connections.
+      </p>
 
       <label className="label">Gender</label>
       <ChipSelect options={GENDERS} value={gender} onChange={setGender} allowDeselect />

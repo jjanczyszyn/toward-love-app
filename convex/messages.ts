@@ -2,7 +2,7 @@ import { mutation, query, QueryCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
-import { mutuallyCompatible, ageOf } from "./matching";
+import { mutuallyCompatible, ageOf, openTo } from "./matching";
 
 const MAX_BODY = 4000;
 
@@ -27,16 +27,16 @@ async function isBlockedEitherWay(
   return !!b;
 }
 
-async function threadHasMessages(
+async function existingIntent(
   ctx: QueryCtx,
   a: Id<"users">,
   b: Id<"users">,
-): Promise<boolean> {
+): Promise<"romantic" | "friend" | null> {
   const first = await ctx.db
     .query("messages")
     .withIndex("by_conversation", (q) => q.eq("conversationKey", convKey(a, b)))
     .first();
-  return !!first;
+  return first ? (first.intent ?? "romantic") : null;
 }
 
 export const send = mutation({
@@ -44,8 +44,9 @@ export const send = mutation({
     token: v.optional(v.string()),
     toUserId: v.id("users"),
     body: v.string(),
+    intent: v.optional(v.union(v.literal("romantic"), v.literal("friend"))),
   },
-  handler: async (ctx, { token, toUserId, body }) => {
+  handler: async (ctx, { token, toUserId, body, intent }) => {
     const me = await requireUser(ctx, token);
     const text = body.trim();
     if (!text) throw new ConvexError("Message is empty.");
@@ -70,14 +71,25 @@ export const send = mutation({
         "This person isn't accepting messages from you right now.",
       );
     }
-    // Must satisfy each other's deal-breakers, unless a thread already exists.
-    const allowed =
-      mutuallyCompatible(me, recipient) ||
-      (await threadHasMessages(ctx, me._id, toUserId));
-    if (!allowed) {
-      throw new ConvexError(
-        "You don't meet each other's deal-breakers, so messaging is closed.",
-      );
+
+    // Intent: existing conversation keeps its intent; otherwise use the chosen one.
+    const prior = await existingIntent(ctx, me._id, toUserId);
+    const conv = prior ?? intent ?? "romantic";
+
+    if (!prior) {
+      if (!openTo(recipient, conv)) {
+        throw new ConvexError(
+          conv === "friend"
+            ? "This person isn't open to friend connections."
+            : "This person isn't open to romantic connections.",
+        );
+      }
+      // Deal-breakers only apply to romantic connections.
+      if (conv === "romantic" && !mutuallyCompatible(me, recipient)) {
+        throw new ConvexError(
+          "You don't meet each other's deal-breakers, so romantic messaging is closed.",
+        );
+      }
     }
 
     const [a, b] = [me._id, toUserId].sort() as [Id<"users">, Id<"users">];
@@ -89,6 +101,7 @@ export const send = mutation({
       conversationKey: convKey(me._id, toUserId),
       body: text,
       createdAt: Date.now(),
+      intent: conv,
     });
     return { ok: true };
   },
@@ -107,6 +120,12 @@ export const thread = query({
       )
       .collect();
     const blocked = await isBlockedEitherWay(ctx, me._id, otherUserId);
+    const iHid = await ctx.db
+      .query("hides")
+      .withIndex("by_pair", (q) =>
+        q.eq("hiderId", me._id).eq("hiddenId", otherUserId),
+      )
+      .unique();
     const otherHidMe = await ctx.db
       .query("hides")
       .withIndex("by_pair", (q) =>
@@ -114,19 +133,29 @@ export const thread = query({
       )
       .unique();
     const hiddenBlocksMe = !!otherHidMe && other.hiddenCanMessage !== true;
+    // If I've blocked or hidden them, don't display the conversation at all.
+    const concealed = blocked || !!iHid;
     const photo = other.photos[0]
       ? await ctx.storage.getUrl(other.photos[0])
       : (other.externalPhotos?.[0] ?? null);
+    const intent = msgs.length ? (msgs[0].intent ?? "romantic") : null;
+    const okForIntent = intent === "friend" ? true : mutuallyCompatible(me, other);
     return {
       other: { id: other._id, name: other.name, age: ageOf(other), photoUrl: photo },
-      canMessage: !blocked && !hiddenBlocksMe && mutuallyCompatible(me, other),
+      intent,
+      canMessage:
+        !concealed && !hiddenBlocksMe && (intent === null ? true : okForIntent),
       blocked,
-      messages: msgs.map((m) => ({
-        id: m._id,
-        body: m.body,
-        createdAt: m.createdAt,
-        fromMe: m.senderId === me._id,
-      })),
+      concealed,
+      youHid: !!iHid,
+      messages: concealed
+        ? []
+        : msgs.map((m) => ({
+            id: m._id,
+            body: m.body,
+            createdAt: m.createdAt,
+            fromMe: m.senderId === me._id,
+          })),
     };
   },
 });
@@ -153,6 +182,25 @@ export const listConversations = query({
   args: { token: v.optional(v.string()) },
   handler: async (ctx, { token }) => {
     const me = await requireUser(ctx, token);
+
+    // Don't surface conversations with people I've blocked/hidden (or who blocked me).
+    const excluded = new Set<string>();
+    for (const b of await ctx.db
+      .query("blocks")
+      .withIndex("by_blocker", (q) => q.eq("blockerId", me._id))
+      .collect())
+      excluded.add(b.blockedId);
+    for (const b of await ctx.db
+      .query("blocks")
+      .withIndex("by_blocked", (q) => q.eq("blockedId", me._id))
+      .collect())
+      excluded.add(b.blockerId);
+    for (const h of await ctx.db
+      .query("hides")
+      .withIndex("by_hider", (q) => q.eq("hiderId", me._id))
+      .collect())
+      excluded.add(h.hiddenId);
+
     const asA = await ctx.db
       .query("messages")
       .withIndex("by_a", (q) => q.eq("a", me._id))
@@ -183,6 +231,7 @@ export const listConversations = query({
 
     const convos = [];
     for (const acc of byOther.values()) {
+      if (excluded.has(acc.otherId)) continue;
       const other = await ctx.db.get(acc.otherId);
       if (!other) continue;
       const photo = other.photos[0]
@@ -196,6 +245,7 @@ export const listConversations = query({
         lastAt: acc.last.createdAt,
         lastFromMe: acc.last.senderId === me._id,
         unread: acc.unread,
+        intent: (acc.last.intent ?? "romantic") as "romantic" | "friend",
       });
     }
     convos.sort((x, y) => y.lastAt - x.lastAt);

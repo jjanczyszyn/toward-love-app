@@ -66,6 +66,7 @@ export const seedFakeProfiles = mutation({
         photos: [],
         externalPhotos: [`https://i.pravatar.cc/480?img=${s.img}`],
         isSeed: true,
+        seeking: i % 4 === 0 ? ["romantic"] : ["romantic", "friend"],
         prefs: {
           interestedInGenders: s.interestedInGenders,
           relationshipTypes: [],

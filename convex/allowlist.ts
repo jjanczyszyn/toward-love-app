@@ -1,6 +1,6 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin, normalizeEmail } from "./authHelpers";
+import { requireAdmin, normalizeEmail, canonicalEmail } from "./authHelpers";
 
 const entryV = v.object({
   email: v.string(),
@@ -12,7 +12,8 @@ async function upsert(
   ctx: any,
   e: { email: string; name?: string; source?: string },
 ) {
-  const email = normalizeEmail(e.email);
+  const email = canonicalEmail(e.email);
+  const display = normalizeEmail(e.email);
   if (!email.includes("@")) return false;
   const existing = await ctx.db
     .query("allowlist")
@@ -22,11 +23,13 @@ async function upsert(
     await ctx.db.patch(existing._id, {
       name: e.name ?? existing.name,
       source: e.source ?? existing.source,
+      displayEmail: existing.displayEmail ?? display,
     });
     return false;
   }
   await ctx.db.insert("allowlist", {
     email,
+    displayEmail: display,
     name: e.name,
     source: e.source,
     addedAt: Date.now(),
@@ -50,7 +53,7 @@ export const remove = mutation({
     await requireAdmin(ctx, token);
     const row = await ctx.db
       .query("allowlist")
-      .withIndex("by_email", (q) => q.eq("email", normalizeEmail(email)))
+      .withIndex("by_email", (q) => q.eq("email", canonicalEmail(email)))
       .unique();
     if (row) await ctx.db.delete(row._id);
     return { ok: true };
@@ -69,7 +72,7 @@ export const list = query({
         .withIndex("by_email", (q) => q.eq("email", r.email))
         .unique();
       out.push({
-        email: r.email,
+        email: r.displayEmail ?? r.email,
         name: r.name ?? u?.name ?? "",
         source: r.source ?? null,
         hasAccount: !!u,

@@ -16,6 +16,7 @@ import type * as files from "../files.js";
 import type * as hides from "../hides.js";
 import type * as matching from "../matching.js";
 import type * as messages from "../messages.js";
+import type * as migrate from "../migrate.js";
 import type * as seed from "../seed.js";
 import type * as ses from "../ses.js";
 import type * as users from "../users.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   hides: typeof hides;
   matching: typeof matching;
   messages: typeof messages;
+  migrate: typeof migrate;
   seed: typeof seed;
   ses: typeof ses;
   users: typeof users;

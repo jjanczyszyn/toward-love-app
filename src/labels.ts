@@ -34,6 +34,11 @@ export const WANT_KIDS: Opt<string>[] = [
   { value: "open", label: "Open to it" },
 ];
 
+export const SEEKING: Opt<string>[] = [
+  { value: "romantic", label: "Romantic" },
+  { value: "friend", label: "Friendship" },
+];
+
 export function labelFor(list: Opt<string>[], value?: string | null): string {
   if (!value) return "";
   return list.find((o) => o.value === value)?.label ?? value;

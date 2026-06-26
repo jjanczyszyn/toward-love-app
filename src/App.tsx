@@ -42,11 +42,13 @@ function Shell({
   const [tab, setTab] = useState<Tab>("browse");
   const [viewUser, setViewUser] = useState<Id<"users"> | null>(null);
   const [openThread, setOpenThread] = useState<Id<"users"> | null>(null);
+  const [openIntent, setOpenIntent] = useState<"romantic" | "friend">("romantic");
   const unread = useQuery(api.messages.unreadCount, { token }) ?? 0;
 
-  const goMessage = (userId: Id<"users">) => {
+  const goMessage = (userId: Id<"users">, intent: "romantic" | "friend") => {
     setViewUser(null);
     setOpenThread(userId);
+    setOpenIntent(intent);
     setTab("messages");
   };
 
@@ -114,6 +116,7 @@ function Shell({
       ) : tab === "messages" ? (
         <Messages
           openThread={openThread}
+          openIntent={openIntent}
           clearOpen={() => setOpenThread(null)}
           onViewProfile={setViewUser}
         />

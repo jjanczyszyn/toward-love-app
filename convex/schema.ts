@@ -13,7 +13,8 @@ import {
 export default defineSchema({
   // Preapproved emails. Only these can request a login code.
   allowlist: defineTable({
-    email: v.string(), // lowercased
+    email: v.string(), // canonical key (gmail dots stripped)
+    displayEmail: v.optional(v.string()), // as entered
     name: v.optional(v.string()),
     source: v.optional(v.string()),
     addedAt: v.number(),
@@ -22,7 +23,8 @@ export default defineSchema({
   // One row per logged-in member. `email` is PRIVATE and never returned to
   // other users.
   users: defineTable({
-    email: v.string(),
+    email: v.string(), // canonical key (gmail dots stripped)
+    displayEmail: v.optional(v.string()), // as entered
     name: v.string(),
     onboarded: v.boolean(),
     createdAt: v.number(),
@@ -49,6 +51,11 @@ export default defineSchema({
 
     // If true, people you've hidden from matches can still message you.
     hiddenCanMessage: v.optional(v.boolean()),
+
+    // What this person is open to. Undefined = romantic only (back-compat).
+    seeking: v.optional(
+      v.array(v.union(v.literal("romantic"), v.literal("friend"))),
+    ),
   }).index("by_email", ["email"]),
 
   // Login codes (one active per email; replaced on re-request).
@@ -80,6 +87,8 @@ export default defineSchema({
     body: v.string(),
     createdAt: v.number(),
     readAt: v.optional(v.number()),
+    // romantic | friend. Undefined = romantic (back-compat).
+    intent: v.optional(v.union(v.literal("romantic"), v.literal("friend"))),
   })
     .index("by_conversation", ["conversationKey", "createdAt"])
     .index("by_a", ["a"])

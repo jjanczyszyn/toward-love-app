@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useSession } from "../session";
@@ -14,6 +14,7 @@ import { Id } from "../../convex/_generated/dataModel";
 
 export function Browse({ onOpen }: { onOpen: (id: Id<"users">) => void }) {
   const { token } = useSession();
+  const [view, setView] = useState<"romantic" | "friend">("romantic");
   const [showFilters, setShowFilters] = useState(false);
   const [genders, setGenders] = useState<string[]>([]);
   const [relationships, setRelationships] = useState<string[]>([]);
@@ -37,8 +38,14 @@ export function Browse({ onOpen }: { onOpen: (id: Id<"users">) => void }) {
     search: search.trim() || undefined,
   };
 
-  const people = useQuery(api.users.browse, { token, filters });
+  const people = useQuery(api.users.browse, { token, filters, intent: view });
   const hide = useMutation(api.hides.hide);
+  const [toast, setToast] = useState("");
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 2600);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const reset = () => {
     setGenders([]);
@@ -54,6 +61,21 @@ export function Browse({ onOpen }: { onOpen: (id: Id<"users">) => void }) {
 
   return (
     <div>
+      {toast && <div className="toast">{toast}</div>}
+      <div className="seg" style={{ marginBottom: 14 }}>
+        <button
+          className={"seg__btn" + (view === "romantic" ? " seg__btn--on" : "")}
+          onClick={() => setView("romantic")}
+        >
+          Romantic
+        </button>
+        <button
+          className={"seg__btn" + (view === "friend" ? " seg__btn--on" : "")}
+          onClick={() => setView("friend")}
+        >
+          Friends
+        </button>
+      </div>
       <div className="row" style={{ marginBottom: 14 }}>
         <input
           className="input"
@@ -89,9 +111,11 @@ export function Browse({ onOpen }: { onOpen: (id: Id<"users">) => void }) {
             <button className={"chip" + (hasPhoto ? " chip--on" : "")} onClick={() => setHasPhoto((v) => !v)}>
               Has photo
             </button>
-            <button className={"chip" + (onlyCompatible ? " chip--on" : "")} onClick={() => setOnlyCompatible((v) => !v)}>
-              Matches my deal-breakers
-            </button>
+            {view === "romantic" && (
+              <button className={"chip" + (onlyCompatible ? " chip--on" : "")} onClick={() => setOnlyCompatible((v) => !v)}>
+                Matches my deal-breakers
+              </button>
+            )}
             <button className="chip" onClick={reset}>Reset</button>
           </div>
         </div>
@@ -119,7 +143,7 @@ export function Browse({ onOpen }: { onOpen: (id: Id<"users">) => void }) {
                   <div className="small muted">{p.locations.join(" · ")}</div>
                 )}
                 <div className="tags">
-                  {p.compatible && <span className="tag tag--ok">✓ matches you</span>}
+                  {view === "romantic" && p.compatible && <span className="tag tag--ok">✓ matches you</span>}
                   {p.relationship && <span className="tag">{labelFor(RELATIONSHIPS, p.relationship)}</span>}
                   {p.wantKids && <span className="tag">{labelFor(WANT_KIDS, p.wantKids)}</span>}
                 </div>
@@ -130,6 +154,7 @@ export function Browse({ onOpen }: { onOpen: (id: Id<"users">) => void }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     hide({ token, userId: p.id });
+                    setToast(`Hid ${p.name} from matches. Undo in your profile.`);
                   }}
                 >
                   Hide from matches

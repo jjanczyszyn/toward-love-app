@@ -1,8 +1,18 @@
 import { Doc } from "./_generated/dataModel";
 
+export type Intent = "romantic" | "friend";
+
 export function ageOf(u: Doc<"users">): number | null {
   if (!u.birthYear) return null;
   return new Date().getFullYear() - u.birthYear;
+}
+
+export function seekingOf(u: Doc<"users">): Intent[] {
+  return (u.seeking ?? ["romantic"]) as Intent[];
+}
+
+export function openTo(u: Doc<"users">, intent: Intent): boolean {
+  return seekingOf(u).includes(intent);
 }
 
 // Does `candidate` satisfy `viewer`'s hard requirements (deal-breakers)?

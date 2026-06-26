@@ -6,6 +6,7 @@ import {
   randomToken,
   generateCode,
   normalizeEmail,
+  canonicalEmail,
   userFromToken,
   adminEmails,
 } from "./authHelpers";
@@ -20,14 +21,13 @@ const MAX_ATTEMPTS = 6;
 export const requestCode = action({
   args: { email: v.string() },
   handler: async (ctx, args): Promise<{ ok: true }> => {
-    const email = normalizeEmail(args.email);
     const code: string | null = await ctx.runMutation(
       internal.auth.prepareCode,
-      { email },
+      { email: canonicalEmail(args.email) },
     );
     // code is null when the email isn't approved — respond identically either way.
     if (code) {
-      await sendCodeEmail(email, code);
+      await sendCodeEmail(normalizeEmail(args.email), code);
     }
     return { ok: true };
   },
@@ -87,7 +87,8 @@ export const verifyCode = mutation({
     ctx,
     args,
   ): Promise<{ token: string; onboarded: boolean }> => {
-    const email = normalizeEmail(args.email);
+    const email = canonicalEmail(args.email);
+    const display = normalizeEmail(args.email);
     const record = await ctx.db
       .query("loginCodes")
       .withIndex("by_email", (q) => q.eq("email", email))
@@ -121,6 +122,7 @@ export const verifyCode = mutation({
       if (!approved) throw new ConvexError("This email is not approved.");
       const id = await ctx.db.insert("users", {
         email,
+        displayEmail: approved.displayEmail ?? display,
         name: approved.name ?? "",
         onboarded: false,
         createdAt: Date.now(),
@@ -157,7 +159,8 @@ export const me = query({
   handler: async (ctx, { token }) => {
     const user = await userFromToken(ctx, token);
     if (!user) return null;
-    return { ...user, isAdmin: adminEmails().includes(user.email) };
+    const isAdmin = adminEmails().includes(user.email);
+    return { ...user, email: user.displayEmail ?? user.email, isAdmin };
   },
 });
 

@@ -26,14 +26,31 @@ export function generateCode(): string {
   return (n[0] % 1_000_000).toString().padStart(6, "0");
 }
 
+// As-entered, just trimmed + lowercased (used for display).
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+// Canonical key for matching accounts. Gmail/Googlemail ignore dots in the
+// local part (and treat googlemail as gmail), so two dot-variants are the
+// same inbox / same account.
+export function canonicalEmail(email: string): string {
+  const e = normalizeEmail(email);
+  const at = e.lastIndexOf("@");
+  if (at < 0) return e;
+  let local = e.slice(0, at);
+  let domain = e.slice(at + 1);
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    local = local.replace(/\./g, "");
+    domain = "gmail.com";
+  }
+  return `${local}@${domain}`;
 }
 
 export function adminEmails(): string[] {
   return (process.env.ADMIN_EMAILS ?? "")
     .split(",")
-    .map((e) => e.trim().toLowerCase())
+    .map((e) => canonicalEmail(e))
     .filter(Boolean);
 }
 
