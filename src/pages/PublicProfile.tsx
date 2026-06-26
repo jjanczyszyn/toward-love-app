@@ -75,47 +75,66 @@ export function PublicProfile({
 
         {p.bio && <p style={{ marginTop: 16, whiteSpace: "pre-wrap" }}>{p.bio}</p>}
 
-        <div className="row row--wrap" style={{ marginTop: 20, gap: 10 }}>
-          {p.romanticOk && (
-            <button className="btn btn--primary" onClick={() => onMessage(p.id, "romantic")}>
-              Message
-            </button>
-          )}
-          {p.friendOk && (
-            <button
-              className={"btn " + (p.romanticOk ? "btn--ghost" : "btn--primary")}
-              onClick={() => onMessage(p.id, "friend")}
-            >
-              Message as friend
-            </button>
-          )}
-          {!p.romanticOk && !p.friendOk && (
-            <span className="notice" style={{ flex: 1 }}>
-              {p.youBlocked
-                ? "You've blocked this person."
-                : !p.passesMine
-                  ? "They don't meet one of your deal-breakers (for romantic)."
-                  : !p.passesTheirs
-                    ? "You don't meet one of their deal-breakers (for romantic)."
-                    : "Messaging isn't available for the connection types you both chose."}
-            </span>
-          )}
+        {(p.romanticOk || p.friendOk) && (
+          <div className="reachout">
+            <div className="reachout__label">Reach out</div>
+            <div className="reachout__btns">
+              {p.romanticOk && (
+                <button
+                  className="btn btn--primary reachout__btn"
+                  onClick={() => onMessage(p.id, "romantic")}
+                >
+                  ♥ Message romantically
+                </button>
+              )}
+              {p.friendOk && (
+                <button
+                  className={"btn reachout__btn " + (p.romanticOk ? "btn--ghost" : "btn--primary")}
+                  onClick={() => onMessage(p.id, "friend")}
+                >
+                  👋 Message as a friend
+                </button>
+              )}
+            </div>
+            <p className="hint" style={{ marginTop: 8 }}>
+              {p.romanticOk && p.friendOk
+                ? "You're both open to either. Pick how you'd like to connect."
+                : p.romanticOk
+                  ? "You're both open to a romantic connection."
+                  : "You're connecting as friends — deal-breakers don't apply."}
+            </p>
+          </div>
+        )}
+
+        {!p.romanticOk && !p.friendOk && (
+          <p className="notice" style={{ marginTop: 18 }}>
+            {p.youBlocked
+              ? "You've blocked this person."
+              : !p.passesMine
+                ? "You can't message romantically (they don't meet one of your deal-breakers), and you're not both open to friendship."
+                : !p.passesTheirs
+                  ? "You can't message romantically (you don't meet one of their deal-breakers), and you're not both open to friendship."
+                  : "Messaging isn't available for the connection types you both chose."}
+          </p>
+        )}
+
+        <div className="row row--wrap" style={{ marginTop: 18, gap: 10 }}>
           {p.youHid ? (
-            <button className="btn btn--ghost" onClick={() => unhide({ token, userId: p.id })}>
+            <button className="btn btn--ghost btn--sm" onClick={() => unhide({ token, userId: p.id })}>
               Unhide
             </button>
           ) : (
-            <button className="btn btn--ghost" onClick={() => hide({ token, userId: p.id })}>
+            <button className="btn btn--ghost btn--sm" onClick={() => hide({ token, userId: p.id })}>
               Hide from matches
             </button>
           )}
           {p.youBlocked ? (
-            <button className="btn btn--ghost" onClick={() => unblock({ token, userId: p.id })}>
+            <button className="btn btn--ghost btn--sm" onClick={() => unblock({ token, userId: p.id })}>
               Unblock
             </button>
           ) : (
             <button
-              className="btn btn--danger"
+              className="btn btn--danger btn--sm"
               onClick={() => {
                 if (
                   window.confirm(

@@ -76,6 +76,11 @@ export function Browse({ onOpen }: { onOpen: (id: Id<"users">) => void }) {
           Friends
         </button>
       </div>
+      <p className="small muted" style={{ margin: "-4px 0 14px" }}>
+        {view === "friend"
+          ? "People open to friendship. Deal-breakers don't apply here."
+          : "People open to romance who fit (and whom you fit). Deal-breakers apply."}
+      </p>
       <div className="row" style={{ marginBottom: 14 }}>
         <input
           className="input"
