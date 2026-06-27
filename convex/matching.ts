@@ -15,6 +15,12 @@ export function openTo(u: Doc<"users">, intent: Intent): boolean {
   return seekingOf(u).includes(intent);
 }
 
+// A user's relationship styles (multi), tolerating the legacy single field.
+export function relationshipsOf(u: Doc<"users">): string[] {
+  if (u.relationships && u.relationships.length) return u.relationships;
+  return u.relationship ? [u.relationship] : [];
+}
+
 // Does `candidate` satisfy `viewer`'s hard requirements (deal-breakers)?
 // Only preferences the viewer marked as a deal-breaker are enforced.
 export function candidatePassesViewer(
@@ -29,11 +35,8 @@ export function candidatePassesViewer(
       return false;
   }
   if (db.relationship && p.relationshipTypes.length > 0) {
-    if (
-      !candidate.relationship ||
-      !p.relationshipTypes.includes(candidate.relationship)
-    )
-      return false;
+    const rels = relationshipsOf(candidate);
+    if (!rels.some((r) => p.relationshipTypes.includes(r as any))) return false;
   }
   if (db.wantKids && p.wantKids.length > 0) {
     if (!candidate.wantKids || !p.wantKids.includes(candidate.wantKids))

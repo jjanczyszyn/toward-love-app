@@ -149,7 +149,11 @@ export function Browse({ onOpen }: { onOpen: (id: Id<"users">) => void }) {
                 )}
                 <div className="tags">
                   {view === "romantic" && p.compatible && <span className="tag tag--ok">✓ matches you</span>}
-                  {p.relationship && <span className="tag">{labelFor(RELATIONSHIPS, p.relationship)}</span>}
+                  {(p.relationships ?? []).map((r) => (
+                    <span className="tag" key={r}>
+                      {r === "other" ? p.relationshipOther || "Other" : labelFor(RELATIONSHIPS, r)}
+                    </span>
+                  ))}
                   {p.wantKids && <span className="tag">{labelFor(WANT_KIDS, p.wantKids)}</span>}
                 </div>
                 <button

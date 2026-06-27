@@ -30,10 +30,13 @@ export function PublicProfile({
   if (p === undefined) return <div className="empty">Loading…</div>;
   if (p === null) return <div className="empty">This member is no longer here.</div>;
 
+  const relLabels = (p.relationships ?? []).map((r) =>
+    r === "other" ? p.relationshipOther || "Other" : labelFor(RELATIONSHIPS, r),
+  );
   const tags = [
     labelFor(GENDERS, p.gender),
     labelFor(ORIENTATIONS, p.orientation),
-    labelFor(RELATIONSHIPS, p.relationship),
+    ...relLabels,
     labelFor(HAVE_KIDS, p.haveKids),
     labelFor(WANT_KIDS, p.wantKids),
   ].filter(Boolean);

@@ -35,7 +35,8 @@ export function ProfileEditor({
   const [birthYear, setBirthYear] = useState("");
   const [gender, setGender] = useState<string>("");
   const [orientation, setOrientation] = useState<string>("");
-  const [relationship, setRelationship] = useState<string>("");
+  const [relationships, setRelationships] = useState<string[]>([]);
+  const [relationshipOther, setRelationshipOther] = useState("");
   const [haveKids, setHaveKids] = useState<string>("");
   const [wantKids, setWantKids] = useState<string>("");
   const [locations, setLocations] = useState<string[]>([]);
@@ -70,7 +71,8 @@ export function ProfileEditor({
       setBirthYear(me.birthYear ? String(me.birthYear) : "");
       setGender(me.gender ?? "");
       setOrientation(me.orientation ?? "");
-      setRelationship(me.relationship ?? "");
+      setRelationships(me.relationships ?? (me.relationship ? [me.relationship] : []));
+      setRelationshipOther(me.relationshipOther ?? "");
       setHaveKids(me.haveKids ?? "");
       setWantKids(me.wantKids ?? "");
       setLocations(me.locations ?? (me.location ? [me.location] : []));
@@ -167,7 +169,8 @@ export function ProfileEditor({
         birthYear: yr,
         gender: (gender || undefined) as any,
         orientation: (orientation || undefined) as any,
-        relationship: (relationship || undefined) as any,
+        relationships: relationships as any,
+        relationshipOther: relationships.includes("other") ? relationshipOther : "",
         haveKids: (haveKids || undefined) as any,
         wantKids: (wantKids || undefined) as any,
         locations,
@@ -303,7 +306,17 @@ export function ProfileEditor({
       <label className="label">Sexual orientation</label>
       <ChipSelect options={ORIENTATIONS} value={orientation} onChange={setOrientation} allowDeselect />
       <label className="label">Relationship style</label>
-      <ChipSelect options={RELATIONSHIPS} value={relationship} onChange={setRelationship} allowDeselect />
+      <ChipMulti options={RELATIONSHIPS} values={relationships} onChange={setRelationships} />
+      {relationships.includes("other") && (
+        <input
+          className="input"
+          style={{ marginTop: 10 }}
+          placeholder="Describe your relationship style"
+          value={relationshipOther}
+          onChange={(e) => setRelationshipOther(e.target.value)}
+        />
+      )}
+      <p className="hint">Pick any that fit. You can choose more than one.</p>
       <label className="label">Kids</label>
       <ChipSelect options={HAVE_KIDS} value={haveKids} onChange={setHaveKids} allowDeselect />
       <label className="label">Do you want (more) kids?</label>

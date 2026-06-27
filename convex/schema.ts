@@ -36,6 +36,8 @@ export default defineSchema({
     relationship: v.optional(relationshipV),
     haveKids: v.optional(haveKidsV),
     wantKids: v.optional(wantKidsV),
+    relationships: v.optional(v.array(relationshipV)),
+    relationshipOther: v.optional(v.string()),
     location: v.optional(v.string()), // legacy single location (back-compat)
     locations: v.optional(v.array(v.string())),
     bio: v.optional(v.string()),

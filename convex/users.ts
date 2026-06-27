@@ -17,6 +17,7 @@ import {
   mutuallyCompatible,
   openTo,
   seekingOf,
+  relationshipsOf,
 } from "./matching";
 
 async function photoUrls(ctx: QueryCtx, u: Doc<"users">) {
@@ -35,6 +36,8 @@ async function toPublic(ctx: QueryCtx, u: Doc<"users">) {
     relationship: u.relationship ?? null,
     haveKids: u.haveKids ?? null,
     wantKids: u.wantKids ?? null,
+    relationships: relationshipsOf(u),
+    relationshipOther: u.relationshipOther ?? null,
     location: u.location ?? null,
     locations: u.locations ?? (u.location ? [u.location] : []),
     bio: u.bio ?? null,
@@ -75,6 +78,8 @@ export const updateProfile = mutation({
     gender: v.optional(genderV),
     orientation: v.optional(orientationV),
     relationship: v.optional(relationshipV),
+    relationships: v.optional(v.array(relationshipV)),
+    relationshipOther: v.optional(v.string()),
     haveKids: v.optional(haveKidsV),
     wantKids: v.optional(wantKidsV),
     location: v.optional(v.string()),
@@ -96,6 +101,9 @@ export const updateProfile = mutation({
     if (args.gender !== undefined) patch.gender = args.gender;
     if (args.orientation !== undefined) patch.orientation = args.orientation;
     if (args.relationship !== undefined) patch.relationship = args.relationship;
+    if (args.relationships !== undefined) patch.relationships = args.relationships;
+    if (args.relationshipOther !== undefined)
+      patch.relationshipOther = args.relationshipOther.trim();
     if (args.haveKids !== undefined) patch.haveKids = args.haveKids;
     if (args.wantKids !== undefined) patch.wantKids = args.wantKids;
     if (args.location !== undefined) patch.location = args.location.trim();
@@ -162,11 +170,10 @@ export const browse = query({
       const age = ageOf(u);
       if (f.genders?.length && (!u.gender || !f.genders.includes(u.gender)))
         continue;
-      if (
-        f.relationships?.length &&
-        (!u.relationship || !f.relationships.includes(u.relationship))
-      )
-        continue;
+      if (f.relationships?.length) {
+        const rels = relationshipsOf(u);
+        if (!rels.some((r) => f.relationships!.includes(r as any))) continue;
+      }
       if (f.wantKids?.length && (!u.wantKids || !f.wantKids.includes(u.wantKids)))
         continue;
       if (f.haveKids && u.haveKids !== f.haveKids) continue;
